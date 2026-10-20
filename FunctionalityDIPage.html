@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css"> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DF1725IED Pre-FAT - DI Functional Test</title>
+    <!-- Add PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+    // Initialize jsPDF after loading
+      window.jsPDF = window.jspdf.jsPDF;
+    </script>
+    <script src="https://unpkg.com/pdf-lib@^1.16.0"></script>
+    <script src="https://unpkg.com/downloadjs@1.4.7"></script>
+</head>
+<body>
+    <!-- Logo at top right -->
+    <img src="Icon/GV.png" alt="Logo" class="logo" id="logo" title="Go to Login Page" />    
+    
+    <!-- DI-32 Functional Test Page -->
+    <div id="FunctionalityDIPage">
+        <h1 style="text-align: center;">
+            Functional Test – Digital Input Module
+        </h1>
+        <p>
+            DI No. : <span id="diNoInput"></span>
+        </p>
+        
+        <p class="notes">
+            Notes: Please refer Mastersheet for this functional test result.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="text-align: center;">No.</th>
+                    <th colspan="2" style="text-align: center;">Double Bit [1,2]</th>
+                    <th colspan="3" style="text-align: center;">IOA/Index</th>
+                    <th rowspan="2" style="text-align: center;">No.</th>
+                    <th colspan="2" style="text-align: center;">Double Bit [1,2]</th>
+                    <th colspan="3" style="text-align: center;">IOA/Index</th>
+                </tr>
+                <tr>
+                    <th colspan="2" style="text-align: center;">Single Bit [0,1]</th>
+                    <th style="text-align: center;">IEC101</th>
+                    <th style="text-align: center;">IEC104</th>
+                    <th style="text-align: center;">DNP3</th>
+                    <th colspan="2" style="text-align: center;">Single Bit [0,1]</th>
+                    <th style="text-align: center;">IEC101</th>
+                    <th style="text-align: center;">IEC104</th>
+                    <th style="text-align: center;">DNP3</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- JavaScript will generate rows here -->
+            </tbody>
+        </table>
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="SelectAll()">Select All</button>
+            <button onclick="clearAllWithConfirm()">Clear All</button>
+        </div>
+        
+        <!-- Navigation buttons -->
+        <div class="control-panel">
+            <button onclick="goToPreviousPage()">Back (A)</button>
+            <button id="submitBtn" onclick="handleDITestSubmission()">Save & Continue (D)</button>
+        </div>
+    </div>
+
+    <!-- DI-16 Functional Test Page -->
+    <div class="page-container hidden" id="di16Page">
+        <h1>Digital Input Module (DI-16) - Functional Test</h1>
+        <p>
+            DI No. : <span id="di16NoInput"></span>
+        </p>
+        <p class="notes">
+            Notes: Please refer Mastersheet for this functional test result.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="text-align: center;">No.</th>
+                    <th colspan="2" style="text-align: center;">Double Bit [1,2]</th>
+                    <th colspan="3" style="text-align: center;">IOA/Index</th>
+                </tr>
+                <tr>
+                    <th colspan="2" style="text-align: center;">Single Bit [0,1]</th>
+                    <th style="text-align: center;">IEC101</th>
+                    <th style="text-align: center;">IEC104</th>
+                    <th style="text-align: center;">DNP3</th>
+                </tr>
+            </thead>
+            <tbody id="di16TableBody"></tbody>
+        </table>
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="SelectAllDI16()">Select All</button>
+            <button onclick="clearAllDI16WithConfirm()">Clear All</button>
+        </div>
+        <div class="control-panel">
+            <button onclick="goToPreviousPage()">Back (A)</button>
+            <button id="submitBtnDI16" onclick="handleDI16TestSubmission()">Save & Continue (D)</button>
+        </div>
+    </div>
+
+    <script src="FunctionalityDIPage.js"></script>
+    <script src="navigationGuard.js"></script>
+    
+    <!-- Keyboard Shortcuts -->
+    <script>
+        document.addEventListener('keydown', function(event) {
+            const isInputField = event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA';
+            
+            if (!isInputField) {
+                // 'D' key for Next
+                if (event.key === 'd' || event.key === 'D' || event.keyCode === 68 || event.keyCode === 100) {
+                    event.preventDefault();
+                    
+                    // Save current data FIRST before any navigation
+                    saveCurrentModuleData();
+                    
+                    // Check which page is currently visible and call appropriate function
+                    const functionalityDIPage = document.getElementById('FunctionalityDIPage');
+                    const di16Page = document.getElementById('di16Page');
+                    
+                    if (functionalityDIPage && functionalityDIPage.style.display !== 'none') {
+                        // Main DI page is visible
+                        handleDITestSubmission();
+                    } else if (di16Page && di16Page.style.display !== 'none') {
+                        // DI-16 page is visible
+                        handleDI16TestSubmission();
+                    }
+                }
+                // 'A' key for Back
+                else if (event.key === 'a' || event.key === 'A' || event.keyCode === 65 || event.keyCode === 97) {
+                    event.preventDefault();
+                    
+                    // Save current data before going back
+                    saveCurrentModuleData();
+                    
+                    goToPreviousPage();
+                }
+            }
+        });
+    </script>
+    
+    <!-- Excel Paste Functionality -->
+    <script>
+        document.addEventListener('paste', function (event) {
+            if (event.target.tagName === 'INPUT' && (event.target.closest('#tableBody') || event.target.closest('#di16TableBody'))) {
+                event.preventDefault();
+                const clipboardData = (event.clipboardData || window.clipboardData).getData('text');
+                const rows = clipboardData.split(/\r\n|\n|\r/).filter(row => row.length > 0);
+                
+                const startInput = event.target;
+                const startCell = startInput.closest('td');
+                const startRow = startCell.closest('tr');
+                const tableBody = startRow.closest('tbody');
+                
+                const startRowIndex = Array.from(tableBody.children).indexOf(startRow);
+                const startCellIndex = Array.from(startRow.children).indexOf(startCell);
+
+                rows.forEach((rowData, rIndex) => {
+                    const cells = rowData.split('\t');
+                    const targetRow = tableBody.children[startRowIndex + rIndex];
+
+                    if (targetRow) {
+                        cells.forEach((cellData, cIndex) => {
+                            const targetCell = targetRow.children[startCellIndex + cIndex];
+                            
+                            if (targetCell) {
+                                const targetInput = targetCell.querySelector('input');
+                                
+                                if (targetInput && !targetInput.disabled && !targetInput.readOnly) {
+                                    targetInput.value = cellData.trim();
+                                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                    targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Confirmation Dialogs for Clear Buttons -->
+    <script>
+        // Confirmation for DI-32 Clear All button
+        function clearAllWithConfirm() {
+            if (confirm("⚠️ WARNING: This will clear ALL test data for the current DI module.\n\nThis includes:\n- All checkbox selections\n- All IOA/Index field entries (IEC101, IEC104, DNP3)\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?")) {
+                clearAll();
+                alert("All data has been cleared for this module.");
+            }
+        }
+
+        // Confirmation for DI-16 Clear All button
+        function clearAllDI16WithConfirm() {
+            if (confirm("⚠️ WARNING: This will clear ALL test data for the current DI-16 module.\n\nThis includes:\n- All checkbox selections\n- All IOA/Index field entries (IEC101, IEC104, DNP3)\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?")) {
+                clearAllDI16();
+                alert("All data has been cleared for this module.");
+            }
+        }
+    </script>
+</body>
+</html>

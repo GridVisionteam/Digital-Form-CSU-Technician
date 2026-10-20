@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--Style will refer to style.css document-->
+    <link rel="stylesheet" href="style.css"> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DF1725IED Pre-FAT</title>
+    <!-- Add PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+    // Initialize jsPDF after loading
+      window.jsPDF = window.jspdf.jsPDF;
+    </script>
+
+    <!-- SCADA Mode Toggle Styles -->
+    <style>
+        .scada-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 2000;
+            display: flex;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: inherit;
+        }
+        .scada-toggle button {
+            border: none;
+            background: transparent;
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #2c3e50;
+            transition: background 0.2s, color 0.2s;
+        }
+        .scada-toggle button.active {
+            background: #1e3c72;
+            color: #fff;
+        }
+        .scada-toggle button:not(.active):hover {
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SCADA Mode Toggle (Top Left) -->
+    <div class="scada-toggle">
+        <button id="scadaReadyBtn" data-mode="ready">1. SCADA READY</button>
+        <button id="scadaEquippedBtn" data-mode="equipped" class="active">2. SCADA EQUIPPED</button>
+    </div>
+
+    <!-- Logo at top right -->
+    <img src="Icon/GV.png" alt="Logo" class="logo" id="logo" title="Go to Login Page" />
+
+    <!-- Login Page -->
+    <div id="loginPage" class="page-container">
+        <h1>PRE - Factory Acceptance Test Record</h1>
+        <div class="control-panel" style="max-width: 400px; margin: auto; display: flex; justify-content: center; gap: 10px;">
+            <button id="StartNewSession" onclick="startNewSession()">Start New Session</button>
+            <button id="importButton">Import</button>
+            <button onclick="goToNext()">Continue</button>
+        </div>
+    </div>
+
+<script src="navigationGuard.js"></script>
+<script src="main.js"></script>
+<script src="import.js"></script>
+
+<!-- SCADA Mode Toggle Logic -->
+<script>
+(function () {
+    const SCADA_MODE_KEY = 'scadaMode'; // 'equipped' | 'ready'
+
+    function getScadaMode() {
+        return localStorage.getItem(SCADA_MODE_KEY) === 'ready' ? 'ready' : 'equipped';
+    }
+
+    function applyToggleUI(mode) {
+        const readyBtn = document.getElementById('scadaReadyBtn');
+        const equippedBtn = document.getElementById('scadaEquippedBtn');
+        if (!readyBtn || !equippedBtn) return;
+        if (mode === 'ready') {
+            readyBtn.classList.add('active');
+            equippedBtn.classList.remove('active');
+        } else {
+            equippedBtn.classList.add('active');
+            readyBtn.classList.remove('active');
+        }
+    }
+
+    function switchMode(mode) {
+        if (getScadaMode() === mode) return;
+
+        // 1. Persist new mode
+        localStorage.setItem(SCADA_MODE_KEY, mode);
+
+        // 2. Tell navigationGuard to swap the sequence immediately
+        if (window.navigationGuard && typeof window.navigationGuard.updateSequenceForMode === 'function') {
+            window.navigationGuard.updateSequenceForMode(mode);
+        }
+
+        // 3. Update toggle UI
+        applyToggleUI(mode);
+
+        // 4. Redirect to index.html for a clean restart in the new mode
+        window.location.href = 'index.html';
+    }
+
+    function init() {
+        const mode = getScadaMode();
+
+        // Ensure navigationGuard has the right sequence loaded
+        if (window.navigationGuard && typeof window.navigationGuard.updateSequenceForMode === 'function') {
+            window.navigationGuard.updateSequenceForMode(mode);
+        }
+
+        applyToggleUI(mode);
+
+        const readyBtn = document.getElementById('scadaReadyBtn');
+        const equippedBtn = document.getElementById('scadaEquippedBtn');
+
+        if (readyBtn) {
+            readyBtn.addEventListener('click', function () {
+                switchMode('ready');
+            });
+        }
+        if (equippedBtn) {
+            equippedBtn.addEventListener('click', function () {
+                switchMode('equipped');
+            });
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+
+</body>
+</html>

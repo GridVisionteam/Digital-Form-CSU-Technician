@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css"> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DF1725IED Pre-FAT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+      window.jsPDF = window.jspdf.jsPDF;
+    </script>
+    <script src="https://unpkg.com/pdf-lib@^1.16.0"></script>
+    <script src="https://unpkg.com/downloadjs@1.4.7"></script>
+</head>
+<body>
+    <img src="Icon/GV.png" alt="Logo" class="logo" id="logo" title="Go to Login Page" />    
+    
+    <!-- Main DO Page -->
+    <div id="functionalityDOPage" class="page-container">
+        <h1>Functional Test – Digital Output Module</h1>
+        <p>
+            DO No. : <span id="doNoInput"></span>
+        </p>
+        
+        <p class="notes">Notes: Please refer Mastersheet for this functional test result.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="text-align: center;">No.</th>
+                    <th colspan="2" style="text-align: center;">Double Command [1,2]</th>
+                    <th colspan="3" style="text-align: center;">IOA/Index</th>
+                </tr>
+                <tr>
+                    <th colspan="2" style="text-align: center;">Single Command [1]</th>
+                    <th style="text-align: center;">IEC101</th>
+                    <th style="text-align: center;">IEC104</th>
+                    <th style="text-align: center;">DNP3</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="SelectAll()">Select All</button>
+            <button onclick="clearAllWithConfirm()">Clear All</button>
+        </div>
+        
+        <div class="control-panel">
+            <button onclick="goToPreviousPage()">Back (A)</button>
+            <button id="submitBtn" onclick="handleDOTestSubmission()">Save &amp; Continue (D)</button>
+        </div>
+    </div>
+
+    <!-- CO-8-A Configuration Page -->
+    <div id="do8Page" class="page-container hidden">
+        <h1>Digital Output Module (CO-8-A)</h1>
+        <p>DO No. : <span id="do8NoInput"></span></p>
+        
+        <p class="notes">Notes: Please refer Mastersheet for this functional test result.</p>        
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2" style="text-align: center;">No.</th>
+                    <th colspan="2" style="text-align: center;">Double Command [1,2]</th>
+                    <th colspan="3" style="text-align: center;">IOA/Index</th>
+                </tr>
+                <tr>
+                    <th colspan="2" style="text-align: center;">Single Command [1]</th>
+                    <th style="text-align: center;">IEC101</th>
+                    <th style="text-align: center;">IEC104</th>
+                    <th style="text-align: center;">DNP3</th>
+                </tr>
+            </thead>
+            <tbody id="do8TableBody"></tbody>
+        </table>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="SelectAllDO8()">Select All</button>
+            <button onclick="clearAllDO8WithConfirm()">Clear All</button>
+        </div>
+        
+        <div class="control-panel">
+            <button onclick="goToPreviousPage()">Back (A)</button>
+            <button id="submitBtnDO8" onclick="handleDO8TestSubmission()">Save &amp; Continue (D)</button>
+        </div>
+    </div>
+    
+    <script src="FunctionalityDOPage.js"></script>
+    <script src="navigationGuard.js"></script>
+    
+    <script>
+    document.addEventListener('keydown', function(event) {
+        // Check if we're in an input field
+        const isInputField = event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA';
+        
+        // Only trigger shortcuts if not typing in an input field
+        if (!isInputField) {
+            // 'D' key for Next (68 is keyCode for 'd', 100 is keyCode for 'D' with Shift)
+            if (event.key === 'd' || event.key === 'D' || event.keyCode === 68 || event.keyCode === 100) {
+                event.preventDefault();
+                
+                // Check which page is currently visible and call appropriate function
+                const functionalityDOPage = document.getElementById('functionalityDOPage');
+                const do8Page = document.getElementById('do8Page');
+                
+                if (functionalityDOPage && functionalityDOPage.style.display !== 'none') {
+                    // Main DO page is visible
+                    handleDOTestSubmission();
+                } else if (do8Page && do8Page.style.display !== 'none') {
+                    // DO-8 page is visible
+                    handleDO8TestSubmission();
+                }
+            }
+            // 'A' key for Back (65 is keyCode for 'a', 97 is keyCode for 'A' with Shift)
+            else if (event.key === 'a' || event.key === 'A' || event.keyCode === 65 || event.keyCode === 97) {
+                event.preventDefault();
+                
+                goToPreviousPage();
+            }
+        }
+    });
+    </script>
+    
+    <script>
+    document.addEventListener('paste', function (event) {
+        // Check if the target is an input field inside any of our data tables
+        const isInTableBody = event.target.closest('#tableBody') || 
+                             event.target.closest('#do8TableBody');
+        
+        if (event.target.tagName === 'INPUT' && isInTableBody) {
+            // Prevent the default single-field paste behavior
+            event.preventDefault();
+
+            // Get the clipboard data as text
+            const clipboardData = (event.clipboardData || window.clipboardData).getData('text');
+            
+            // Excel rows are separated by newlines (\n)
+            // Excel columns are separated by tabs (\t)
+            const rows = clipboardData.split(/\r\n|\n|\r/).filter(row => row.length > 0);
+            
+            // Get the starting position (the input you clicked on)
+            const startInput = event.target;
+            const startCell = startInput.closest('td');
+            const startRow = startCell.closest('tr');
+            const tableBody = startRow.closest('tbody');
+            
+            // Calculate the starting row and column index
+            const startRowIndex = Array.from(tableBody.children).indexOf(startRow);
+            const startCellIndex = Array.from(startRow.children).indexOf(startCell);
+
+            // Loop through the pasted rows
+            rows.forEach((rowData, rIndex) => {
+                const cells = rowData.split('\t');
+                const targetRow = tableBody.children[startRowIndex + rIndex];
+
+                if (targetRow) {
+                    // Loop through the pasted cells (columns)
+                    cells.forEach((cellData, cIndex) => {
+                        // Find the target cell based on the starting offset
+                        const targetCell = targetRow.children[startCellIndex + cIndex];
+                        
+                        if (targetCell) {
+                            // Find the input inside that cell
+                            const targetInput = targetCell.querySelector('input');
+                            
+                            // Only paste if an input exists and is editable
+                            if (targetInput && !targetInput.disabled && !targetInput.readOnly) {
+                                targetInput.value = cellData.trim();
+                                
+                                // Dispatch 'input' and 'change' events so your validation/saving logic knows data changed
+                                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    });
+    </script>
+
+    <!-- Confirmation Dialogs for Clear Buttons -->
+    <script>
+        // Confirmation for CO-16-A (main DO page) Clear All button
+        function clearAllWithConfirm() {
+            if (confirm("⚠️ WARNING: This will clear ALL test data for the current DO module.\n\nThis includes:\n- All checkbox selections\n- All IOA/Index field entries (IEC101, IEC104, DNP3)\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?")) {
+                clearAll();
+                alert("All data has been cleared for this module.");
+            }
+        }
+
+        // Confirmation for CO-8-A Clear All button
+        function clearAllDO8WithConfirm() {
+            if (confirm("⚠️ WARNING: This will clear ALL test data for the current CO-8-A module.\n\nThis includes:\n- All checkbox selections\n- All IOA/Index field entries (IEC101, IEC104, DNP3)\n\nThis action CANNOT be undone.\n\nAre you sure you want to continue?")) {
+                clearAllDO8();
+                alert("All data has been cleared for this module.");
+            }
+        }
+    </script>
+</body>
+</html>

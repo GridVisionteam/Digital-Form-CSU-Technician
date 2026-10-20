@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--Style will refer to style.css document-->
+    <link rel="stylesheet" href="style.css"> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DF1725IED Pre-FAT</title>
+    <!-- Add PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+    // Initialize jsPDF after loading
+      window.jsPDF = window.jspdf.jsPDF;
+    </script>
+    <script src="https://unpkg.com/pdf-lib@^1.16.0"></script>
+    <script src="https://unpkg.com/downloadjs@1.4.7"></script>
+</head>
+<body>
+    <!-- Logo at top right -->
+    <img src="Icon/GV.png" alt="Logo" class="logo" id="logo" title="Go to Login Page" />    
+    
+    <!-- Spare6 -->
+    <div id="CSUTestingChecklist2">
+        <h1 style="text-align: center;">
+            CSU Testing Checklist
+        </h1>
+        <div class="Spare6">
+            <label>6. Spare </label>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">No.</th>
+                        <th style="text-align: center;">I/O Module Card</th>
+                        <th style="text-align: center;">Description</th>
+                        <th style="text-align: center;">IOA</th>
+                        <th style="text-align: center;">Status</th>
+                        <th style="text-align: center;">Remote/RCB</th>
+                        <th style="text-align: center;">Supervisory/ASE</th>
+                    </tr>
+                </thead>
+                <tbody id="Spare6Tbody">
+                    <!---script-->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Spare7 Table -->
+        <div class="Spare7">
+            <label>7. Spare </label>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">No.</th>
+                        <th style="text-align: center;">I/O Module Card</th>
+                        <th style="text-align: center;">Description</th>
+                        <th style="text-align: center;">IOA</th>
+                        <th style="text-align: center;">Status</th>
+                        <th style="text-align: center;">Remote/RCB</th>
+                        <th style="text-align: center;">Supervisory/ASE</th>
+                    </tr>
+                </thead>
+                <tbody id="Spare7Tbody">
+                    <!---script-->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Select All / Clear All Buttons - Same structure as AI page -->
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="clearAllCSU2WithConfirm()">Clear All</button>
+        </div>
+
+        <!-- Add the submit button panel at the bottom -->
+        <div class="control-panel">
+            <button onclick="goToPreviousPage2()">
+                Back (A)
+            </button>
+            <button id="submitBtn" onclick="goToNext2()">
+                Save &amp; Continue (D)
+            </button>
+        </div>
+    </div>
+
+    <script src="CsuTestingChecklist_SPARE.js"></script> 
+    <script src="navigationGuard.js"></script>
+    
+    <!-- Keyboard Shortcuts -->
+    <script>
+        document.addEventListener('keydown', function(event) {
+            // Check if we're in an input field
+            const isInputField = event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA';
+            
+            // Only trigger shortcuts if not typing in an input field
+            if (!isInputField) {
+                // 'D' key for Next
+                if (event.key === 'd' || event.key === 'D' || event.keyCode === 68 || event.keyCode === 100) {
+                    event.preventDefault();
+                    goToNext2();
+                }
+                // 'A' key for Back
+                else if (event.key === 'a' || event.key === 'A' || event.keyCode === 65 || event.keyCode === 97) {
+                    event.preventDefault();
+                    goToPreviousPage2();
+                }
+            }
+        });
+
+        // Function to validate Remote/Supervisory input - same as checklist page
+        function validateRemoteSupervisoryInput(input) {
+            const value = input.value;
+            
+            // If empty, allow it (user can clear)
+            if (value === '') {
+                return;
+            }
+            
+            // Only allow "/" or "-"
+            if (value !== '/' && value !== '-') {
+                // If the user typed something else, revert to the previous value
+                const previousValue = input.dataset.previousValue || '';
+                input.value = previousValue;
+                // Show a brief visual feedback
+                input.style.borderColor = 'red';
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                }, 500);
+            } else {
+                // Store the valid value
+                input.dataset.previousValue = value;
+                input.style.borderColor = 'green';
+                setTimeout(() => {
+                    input.style.borderColor = '';
+                }, 300);
+            }
+        }
+
+        // Add event listeners to all Remote/Supervisory inputs after they're created
+        document.addEventListener('DOMContentLoaded', function() {
+            // Use MutationObserver to watch for new inputs
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1) { // Element node
+                                // Check for inputs within the added node
+                                const inputs = node.querySelectorAll ? node.querySelectorAll('input[type="text"]') : [];
+                                inputs.forEach(function(input) {
+                                    // Check if this is a Remote or Supervisory input
+                                    if (input.name && (input.name.includes('remote') || input.name.includes('supervisory'))) {
+                                        input.addEventListener('input', function() {
+                                            validateRemoteSupervisoryInput(this);
+                                        });
+                                        input.dataset.previousValue = input.value;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Start observing the document body for added nodes
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Also add listeners to existing inputs
+            setTimeout(function() {
+                const existingInputs = document.querySelectorAll('input[type="text"]');
+                existingInputs.forEach(function(input) {
+                    if (input.name && (input.name.includes('remote') || input.name.includes('supervisory'))) {
+                        input.addEventListener('input', function() {
+                            validateRemoteSupervisoryInput(this);
+                        });
+                        input.dataset.previousValue = input.value;
+                    }
+                });
+            }, 500);
+        });
+    </script>
+</body>
+</html>
