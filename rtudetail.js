@@ -10,11 +10,13 @@ function saveCurrentRTUDetails() {
     const contractNoInput = document.getElementById('contractNo');
     const projectNameInput = document.getElementById('projectName');
     const bcSerialInput = document.getElementById('BCSerial');
+    const batchNoInput = document.getElementById('batchNo');
 
     if (rtuSerialInput) localStorage.setItem('session_rtuSerial', rtuSerialInput.value.trim());
     if (contractNoInput) localStorage.setItem('session_contractNo', contractNoInput.value.trim());
     if (projectNameInput) localStorage.setItem('session_projectName', projectNameInput.value.trim());
     if (bcSerialInput) localStorage.setItem('session_bcSerial', bcSerialInput.value.trim());
+    if (batchNoInput) localStorage.setItem('session_Batch_No', batchNoInput.value.trim());
 }
 
 // --- Utility Functions ---
@@ -51,11 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const contractNoInput = document.getElementById('contractNo');
     const projectNameInput = document.getElementById('projectName');
     const bcSerialInput = document.getElementById('BCSerial');
+    const batchNoInput = document.getElementById('batchNo');
 
     if (rtuSerialInput) rtuSerialInput.value = getStoredValue('session_rtuSerial');
     if (contractNoInput) contractNoInput.value = getStoredValue('session_contractNo');
     if (projectNameInput) projectNameInput.value = getStoredValue('session_projectName');
     if (bcSerialInput) bcSerialInput.value = getStoredValue('session_bcSerial');
+    if (batchNoInput) batchNoInput.value = getStoredValue('session_Batch_No');
 
     // --- Real-time input masking/formatting for BC Serial ---
     if (bcSerialInput) {
@@ -97,15 +101,17 @@ function goToBQPage() {
     const contractNoInput = document.getElementById("contractNo");
     const projectNameInput = document.getElementById("projectName");
     const bcSerialInput = document.getElementById("BCSerial");
+    const batchNoInput = document.getElementById("batchNo");
 
     const rtuSerial = rtuSerialInput ? rtuSerialInput.value.trim() : "";
     const contractNo = contractNoInput ? contractNoInput.value.trim() : "";
     const projectName = projectNameInput ? projectNameInput.value.trim() : "";
     const bcSerial = bcSerialInput ? bcSerialInput.value.trim() : "";
+    const batchNo = batchNoInput ? batchNoInput.value.trim() : "";
 
-    // Validate all required fields including BC Serial
-    if (!rtuSerial || !contractNo || !projectName || !bcSerial) {
-        showCustomAlert("Please fill in all fields (RTU Serial No., Contract No., Project Name, and Battery Charger Serial No.)");
+    // Validate all required fields including BC Serial and Batch No.
+    if (!rtuSerial || !contractNo || !projectName || !bcSerial || !batchNo) {
+        showCustomAlert("Please fill in all fields (RTU Serial No., Contract No., Batch No., Project Name, and Battery Charger Serial No.)");
         return;
     }
 
