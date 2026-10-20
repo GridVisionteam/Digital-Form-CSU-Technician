@@ -2,7 +2,16 @@
 let isDriveInitialized = false;
 let driveStatusElement = null;
 
-// Initialize Google Drive upload functionality
+// ---------- filename helper (NO space before "(") ----------
+function buildContractWithBatch() {
+    const rawContract = localStorage.getItem('session_contractNo') || 'ContractNo';
+    const rawBatch = localStorage.getItem('session_Batch_No') || 'BatchNo';
+    const cleanContract = String(rawContract).replace(/"/g, '').replace(/[\s\u00A0]+$/g, '').trim() || 'ContractNo';
+    const cleanBatch = String(rawBatch).replace(/"/g, '').trim() || 'BatchNo';
+    return `${cleanContract}(B${cleanBatch})`;
+}
+window.buildContractWithBatch = buildContractWithBatch;
+
 async function initDriveUpload() {
     console.log('Initializing Drive Upload...');
     
@@ -16,22 +25,22 @@ async function initDriveUpload() {
     return false;
 }
 
-// Main function to upload BQ files to Google Drive with contract folders
 async function uploadBQFiles() {
     try {
         console.log('=== STARTING UPLOAD PROCESS ===');
         
         const contractNo = localStorage.getItem('session_contractNo') || 'ContractNo';
-        const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
+        const cleanRtuSerial = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
+        const contractWithBatch = buildContractWithBatch();
         const now = new Date();
         const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
         
-        console.log('Contract:', contractNo, 'RTU Serial:', rtuSerial);
+        console.log('Contract:', contractNo, 'Batch:', contractWithBatch, 'RTU Serial:', cleanRtuSerial);
         
         showDriveStatus('Starting Google Drive upload...', 'info');
         
         // 1. Generate JSON file
-        const jsonData = await generateBQJsonData(contractNo, rtuSerial);
+        const jsonData = await generateBQJsonData(contractNo, cleanRtuSerial);
         if (!jsonData) {
             throw new Error('Failed to generate JSON data');
         }
@@ -50,7 +59,7 @@ async function uploadBQFiles() {
         if (typeof generateAndDownloadPDF === 'function') {
             try {
                 showDriveStatus('Generating PDF...', 'info');
-                const pdfResult = await generateAndDownloadPDF(contractNo, rtuSerial, true);
+                const pdfResult = await generateAndDownloadPDF(contractWithBatch, cleanRtuSerial, true);
                 if (pdfResult && pdfResult.blob) {
                     pdfBlob = pdfResult.blob;
                 }
@@ -59,13 +68,12 @@ async function uploadBQFiles() {
             }
         }
         
-        // Upload files one by one to ensure they all get uploaded
         const uploadResults = [];
         
         // UPLOAD JSON FILE
         if (jsonData) {
             try {
-                const jsonFileName = `${dateformat}_BQ_BACKUP_${contractNo}_${rtuSerial}.json`;
+                const jsonFileName = `${dateformat}_BQ_BACKUP_${contractWithBatch}_${cleanRtuSerial}.json`;
                 showDriveStatus(`Uploading ${jsonFileName}...`, 'info');
                 console.log('Uploading JSON file:', jsonFileName);
                 
@@ -92,7 +100,7 @@ async function uploadBQFiles() {
         // UPLOAD TXT FILE
         if (txtContent) {
             try {
-                const txtFileName = `${dateformat}_QR_TXT_${contractNo}_${rtuSerial}.txt`;
+                const txtFileName = `${dateformat}_QR_TXT_${contractWithBatch}_${cleanRtuSerial}.txt`;
                 showDriveStatus(`Uploading ${txtFileName}...`, 'info');
                 console.log('Uploading TXT file:', txtFileName);
                 
@@ -119,7 +127,7 @@ async function uploadBQFiles() {
         // UPLOAD PDF FILE
         if (pdfBlob) {
             try {
-                const pdfFileName = `${dateformat}_RTU_SERIAL_NUMBER_LIST_${contractNo}_${rtuSerial}.pdf`;
+                const pdfFileName = `${dateformat}_RTU_SERIAL_NUMBER_LIST_${contractWithBatch}_${cleanRtuSerial}.pdf`;
                 showDriveStatus(`Uploading ${pdfFileName}...`, 'info');
                 console.log('Uploading PDF file:', pdfFileName);
                 
@@ -148,7 +156,7 @@ async function uploadBQFiles() {
                 const qrDataUrl = await generateQRCodeDataURL(txtContent);
                 if (qrDataUrl) {
                     const qrBlob = dataURLtoBlob(qrDataUrl);
-                    const qrFileName = `${dateformat}_QR_CODE_${contractNo}_${rtuSerial}.png`;
+                    const qrFileName = `${dateformat}_QR_CODE_${contractWithBatch}_${cleanRtuSerial}.png`;
                     showDriveStatus(`Uploading ${qrFileName}...`, 'info');
                     console.log('Uploading QR Code:', qrFileName);
                     
@@ -200,12 +208,10 @@ async function uploadBQFiles() {
     }
 }
 
-// Generate JSON data for upload
 async function generateBQJsonData(contractNo, rtuSerial) {
     try {
         const exportData = {};
         
-        // Copy all localStorage items
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             try {
@@ -215,11 +221,11 @@ async function generateBQJsonData(contractNo, rtuSerial) {
             }
         }
         
-        // Add metadata
         exportData.metadata = {
             generationDate: new Date().toISOString(),
             rtuSerial: rtuSerial,
             contractNo: contractNo,
+            Batch_No: localStorage.getItem('session_Batch_No') || 'N/A',
             testerName: localStorage.getItem('session_name') || 'N/A',
             uploadType: 'BQ_Configuration'
         };
@@ -232,7 +238,6 @@ async function generateBQJsonData(contractNo, rtuSerial) {
     }
 }
 
-// Generate QR Code data URL
 async function generateQRCodeDataURL(txtContent) {
     return new Promise((resolve) => {
         try {
@@ -242,45 +247,34 @@ async function generateQRCodeDataURL(txtContent) {
                 return;
             }
             
-            // Use qrcode-generator library - SAME as BQ.js
             const typeNumber = 0;
             const errorCorrectionLevel = 'L';
             const qr = qrcode(typeNumber, errorCorrectionLevel);
             qr.addData(txtContent);
             qr.make();
             
-            // Set target size for QR code - SAME as BQ.js (810px)
             const targetSize = 810;
             const moduleCount = qr.getModuleCount();
-            
-            // Calculate module size - SAME as BQ.js
             const moduleSize = Math.floor(targetSize / moduleCount);
             const actualQrSize = moduleSize * moduleCount;
-            
-            // Add margin (quiet zone) - SAME as BQ.js (marginModules = 1)
             const marginModules = 1;
             const marginPixels = marginModules * moduleSize;
             const qrTotalSize = actualQrSize + (marginPixels * 2);
             
-            // Calculate label area with proper spacing - SAME as BQ.js
-            const line1Height = 30;      // Height for first line
-            const line2Height = 30;      // Height for second line
-            const spacingBetweenLines = 15; // SPACE BETWEEN LINES
-            const labelHeight = line1Height + spacingBetweenLines + line2Height + 15; // +15 for bottom padding
-            
+            const line1Height = 30;
+            const line2Height = 30;
+            const spacingBetweenLines = 15;
+            const labelHeight = line1Height + spacingBetweenLines + line2Height + 15;
             const totalHeight = qrTotalSize + labelHeight;
             
-            // Create canvas - SAME as BQ.js
             const canvas = document.createElement('canvas');
             canvas.width = qrTotalSize;
             canvas.height = totalHeight;
             const ctx = canvas.getContext('2d');
             
-            // Fill background with white - SAME as BQ.js
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw QR code - SAME as BQ.js
             ctx.fillStyle = '#000000';
             for (let row = 0; row < moduleCount; row++) {
                 for (let col = 0; col < moduleCount; col++) {
@@ -292,29 +286,24 @@ async function generateQRCodeDataURL(txtContent) {
                 }
             }
             
-            // Get supplier name and contract info - SAME as BQ.js
-            const contractNo = localStorage.getItem('session_contractNo') || 'ContractNo';
-            const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
+            const contractWithBatch = buildContractWithBatch();
+            const rtuSerial = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
             const supplierName = document.getElementById('supplierName')?.value || 
                                 localStorage.getItem('session_supplierName') || 
                                 'Unknown Supplier';
             
-            // Calculate starting Y position for text - SAME as BQ.js
-            const textStartY = qrTotalSize + 10; // 10px padding from QR code
+            const textStartY = qrTotalSize + 10;
             
-            // Draw first line - SAME as BQ.js (bold 35px Arial)
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 35px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(rtuSerial, canvas.width / 2, textStartY);
             
-            // Draw second line with proper spacing - SAME as BQ.js
             ctx.font = 'bold 35px Arial';
             const line2Y = textStartY + line1Height + spacingBetweenLines;
-            ctx.fillText(`${contractNo} - ${supplierName}`, canvas.width / 2, line2Y);
+            ctx.fillText(`${contractWithBatch} - ${supplierName}`, canvas.width / 2, line2Y);
             
-            // Convert to data URL with high quality
             const dataUrl = canvas.toDataURL('image/png', 1.0);
             resolve(dataUrl);
             
@@ -325,7 +314,6 @@ async function generateQRCodeDataURL(txtContent) {
     });
 }
 
-// Convert data URL to blob
 function dataURLtoBlob(dataurl) {
     try {
         const arr = dataurl.split(',');
@@ -345,7 +333,6 @@ function dataURLtoBlob(dataurl) {
     }
 }
 
-// Show drive status
 function showDriveStatus(message, type = 'info') {
     console.log(`Drive Status [${type}]: ${message}`);
     
@@ -396,7 +383,6 @@ function showDriveStatus(message, type = 'info') {
     }, delay);
 }
 
-// SIMPLE, WORKING VERSION - Override the submit button
 async function overrideSubmitButton() {
     console.log('=== OVERRIDING SUBMIT BUTTON ===');
     
@@ -406,7 +392,6 @@ async function overrideSubmitButton() {
         return;
     }
     
-    // Clone and replace button to remove old event listeners
     const newSubmitBtn = submitBtn.cloneNode(true);
     submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
     
@@ -416,13 +401,11 @@ async function overrideSubmitButton() {
         
         console.log('=== SUBMIT BUTTON CLICKED ===');
         
-        // Disable button
         const originalText = newSubmitBtn.textContent;
         newSubmitBtn.disabled = true;
         newSubmitBtn.textContent = 'Processing...';
         
         try {
-            // 1. Validate
             if (typeof validateAllModuleFields === 'function') {
                 if (!validateAllModuleFields()) {
                     newSubmitBtn.disabled = false;
@@ -431,37 +414,28 @@ async function overrideSubmitButton() {
                 }
             }
             
-            // 2. Save data
             if (typeof saveCurrentBQCounts === 'function') {
                 saveCurrentBQCounts();
             }
             
-            // 3. Generate and save local files FIRST
             console.log('Generating local files...');
             showDriveStatus('Generating local backup files...', 'info');
             
-            // Call original goToNext with returnOnly = true to get data but not redirect
             let exportData = null;
             if (typeof window.goToNext === 'function') {
                 exportData = await window.goToNext(true);
             }
             
-            // Generate local files immediately
             await generateLocalFiles();
             
-            // 4. Now upload to Google Drive
             console.log('Starting Google Drive upload...');
             showDriveStatus('Uploading to Google Drive...', 'info');
             
-            // Try Drive upload
             let uploadSuccess = false;
             let uploadMessage = '';
             
             try {
-                // Initialize Drive
                 await initDriveUpload();
-                
-                // Upload files
                 const uploadResult = await uploadBQFiles();
                 
                 if (uploadResult.success) {
@@ -475,7 +449,6 @@ async function overrideSubmitButton() {
                 uploadMessage = 'Drive upload error: ' + uploadError.message;
             }
             
-            // 5. Show final status
             if (uploadSuccess) {
                 showDriveStatus(uploadMessage, 'success');
                 showCustomAlert('✅ Files saved locally and uploaded to Google Drive!');
@@ -484,9 +457,7 @@ async function overrideSubmitButton() {
                 showCustomAlert('⚠️ Files saved locally but Drive upload had issues. Check console for details.');
             }
             
-            // 6. Wait a moment then redirect
             setTimeout(() => {
-                // Mark page as completed in navigation guard
                 if (window.navigationGuard && typeof window.navigationGuard.markPageAsCompleted === 'function') {
                     window.navigationGuard.markPageAsCompleted();
                 }
@@ -499,7 +470,6 @@ async function overrideSubmitButton() {
             showDriveStatus(`Error: ${error.message}`, 'error');
             showCustomAlert('❌ Error during save process. Please try again.');
             
-            // Re-enable button
             newSubmitBtn.disabled = false;
             newSubmitBtn.textContent = originalText;
         }
@@ -508,55 +478,28 @@ async function overrideSubmitButton() {
     console.log('Submit button overridden successfully');
 }
 
-// Helper function to generate local files
 async function generateLocalFiles() {
     try {
         console.log('Generating local files...');
         
-        const contractNo = localStorage.getItem('session_contractNo') || 'ContractNo';
-        const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
+        const contractWithBatch = buildContractWithBatch();
+        const cleanRtuSerial = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
         const now = new Date();
         const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
         
-        // 1. Generate and download JSON
-        /*const jsonData = await generateBQJsonData(contractNo, rtuSerial);
-        if (jsonData) {
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(jsonData);
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', `${dateformat}_BQ_BACKUP_${contractNo}_${rtuSerial}.json`);
-            document.body.appendChild(linkElement);
-            linkElement.click();
-            document.body.removeChild(linkElement);
-        }*/
-        
-        // 2. Generate and download TXT
-        /*if (typeof generateTXTContent === 'function') {
-            const txtContent = generateTXTContent();
-            if (txtContent) {
-                const txtDataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txtContent);
-                const txtLinkElement = document.createElement('a');
-                txtLinkElement.setAttribute('href', txtDataUri);
-                txtLinkElement.setAttribute('download', `${dateformat}_QR_TXT_${contractNo}_${rtuSerial}.txt`);
-                document.body.appendChild(txtLinkElement);
-                txtLinkElement.click();
-                document.body.removeChild(txtLinkElement);
-            }
-        }*/
-        
-        // 3. Generate and download PDF
+        // PDF
         if (typeof generateAndDownloadPDF === 'function') {
             setTimeout(async () => {
-                await generateAndDownloadPDF(contractNo, rtuSerial, false);
+                await generateAndDownloadPDF(contractWithBatch, cleanRtuSerial, false);
             }, 500);
         }
         
-        // 4. Generate QR Code
+        // QR Code
         if (typeof generateAndDownloadQRCode === 'function' && typeof generateTXTContent === 'function') {
             const txtContent = generateTXTContent();
             if (txtContent) {
                 setTimeout(async () => {
-                    await generateAndDownloadQRCode(txtContent, dateformat, contractNo, rtuSerial);
+                    await generateAndDownloadQRCode(txtContent, dateformat, contractWithBatch, cleanRtuSerial);
                 }, 1000);
             }
         }
@@ -570,7 +513,6 @@ async function generateLocalFiles() {
     }
 }
 
-// Simple alert function
 function showCustomAlert(message) {
     const existingAlert = document.getElementById('customAlertBox');
     if (existingAlert) existingAlert.remove();
@@ -595,17 +537,14 @@ function showCustomAlert(message) {
     setTimeout(() => messageBox.remove(), 3000);
 }
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== BQ DRIVE UPLOAD MODULE LOADED ===');
     
-    // Override submit button after a short delay
     setTimeout(async () => {
         await overrideSubmitButton();
     }, 1000);
 });
 
-// Export functions
 window.uploadBQFiles = uploadBQFiles;
 window.initDriveUpload = initDriveUpload;
 window.overrideSubmitButton = overrideSubmitButton;

@@ -117,19 +117,27 @@ function applyScadaReadyColumnVisibility() {
             }
         });
 
-        // Hide body cells
+        // Hide body cells AND disable inputs inside them so validation skips them
         const rows = tbody.querySelectorAll('tr');
         rows.forEach(function(row) {
             const cells = row.querySelectorAll('td');
             cells.forEach(function(td, idx) {
                 if (HIDDEN_COLUMN_INDEXES.includes(idx)) {
                     td.style.display = 'none';
+                    // Disable any inputs inside hidden cells (e.g. Supervisory inputs).
+                    // Disabled inputs are automatically skipped by validateCSUData()
+                    // and highlightMissingFields().
+                    td.querySelectorAll('input, select, textarea').forEach(function(el) {
+                        el.disabled = true;
+                        el.style.backgroundColor = '#f0f0f0';
+                        el.style.color = '#999';
+                    });
                 }
             });
         });
     });
 
-    console.log('SCADA ready mode: I/O Module Card, IOA and Supervisory columns hidden.');
+    console.log('SCADA ready mode: I/O Module Card, IOA and Supervisory columns hidden and disabled.');
 }
 
 // Function to setup validation for EFI AC/DC inputs
@@ -615,9 +623,11 @@ function populateTableFromData(tbodyId, dataArray, dataKey) {
 // ============================================================
 // VALIDATION FUNCTION - Check if all required fields are filled
 // Both Remote AND Supervisory must be filled with "/" (unless loaded N/A)
+// In SCADA Ready mode, Supervisory is hidden/disabled and therefore skipped.
 // ============================================================
 function validateCSUData() {
     let missingFields = [];
+    const scadaReady = isScadaReadyMode();
 
     // Check all Remote AND Supervisory fields
     const textInputs = document.querySelectorAll(
@@ -626,8 +636,13 @@ function validateCSUData() {
 
     textInputs.forEach(input => {
         if (input.name && (input.name.includes('remote') || input.name.includes('supervisory'))) {
-            // Skip if disabled (value is "-" meaning N/A from loaded data)
+            // Skip if disabled (value is "-" meaning N/A from loaded data,
+            // OR column is hidden in SCADA Ready mode)
             if (input.disabled) return;
+
+            // Skip Supervisory validation entirely in SCADA Ready mode
+            // (the column is hidden so the user cannot fill it)
+            if (scadaReady && input.name.includes('supervisory')) return;
 
             const value = input.value.trim();
 
@@ -665,6 +680,9 @@ function validateCSUData() {
     efiInputs.forEach(input => {
         // Only check EFI AC/DC fields (name contains ac or dc)
         if (input.name && (input.name.includes('_ac_') || input.name.includes('_dc_'))) {
+            // Skip disabled fields
+            if (input.disabled) return;
+
             // Check if this is the SPARE EFI (LBS3 item 7)
             const row = input.closest('tr');
             const cells = row ? row.querySelectorAll('td') : [];
@@ -787,7 +805,7 @@ function goToNext() {
             message += `${index + 1}. ${field}\n`;
         });
         message += '\nPlease fill in all required fields before continuing.\n';
-        message += 'Note: Remote and Supervisory fields must all be "/" and "EFI 2 (SPARE)" fields must be filled with a positive number or "-" for N/A.';
+        message += 'Note: Remote fields must all be "/" and "EFI 2 (SPARE)" fields must be filled with a positive number or "-" for N/A.';
 
         alert(message);
 
@@ -824,6 +842,7 @@ function goToNext() {
 
 // ============================================================
 // HIGHLIGHT MISSING FIELDS - ONLY highlight the specific invalid fields
+// Skips hidden columns (e.g. Supervisory in SCADA Ready mode).
 // ============================================================
 function highlightMissingFields(missingFieldObjects) {
     // Reset all borders and backgrounds first
@@ -841,8 +860,14 @@ function highlightMissingFields(missingFieldObjects) {
             // Highlight the specific input that has the error
             if (fieldObj.input) {
                 const input = fieldObj.input;
-                // Don't highlight disabled fields (loaded N/A data)
+                // Don't highlight disabled fields (loaded N/A data or hidden columns)
                 if (!input.disabled) {
+                    // Don't highlight fields inside hidden cells/rows
+                    const cell = input.closest('td');
+                    if (cell && cell.style.display === 'none') return;
+                    const row = input.closest('tr');
+                    if (row && row.style.display === 'none') return;
+
                     input.style.borderColor = 'red';
                     input.style.borderWidth = '3px';
                     input.style.backgroundColor = '#ffcccc';
@@ -891,6 +916,8 @@ function savePreRequisiteTestData() {
 }
 
 // Helper function to save data from a specific table
+// Note: reads .value directly, so it still saves hidden/disabled Supervisory values
+// correctly (they simply stay empty in SCADA Ready mode, which is expected).
 function saveTableData(tbodyId, dataKey, targetArray) {
     const rows = document.querySelectorAll(`#${tbodyId} tr`);
     rows.forEach((row, index) => {

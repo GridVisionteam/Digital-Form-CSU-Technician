@@ -19,6 +19,18 @@ const serialNumberTracker = {
     }
 };
 
+// ==========================================
+// FILENAME HELPER — "Contract(Bbatch)" with NO space before "("
+// ==========================================
+function buildContractWithBatch() {
+    const rawContract = localStorage.getItem('session_contractNo') || 'ContractNo';
+    const rawBatch = localStorage.getItem('session_Batch_No') || 'BatchNo';
+    const cleanContract = String(rawContract).replace(/"/g, '').replace(/[\s\u00A0]+$/g, '').trim() || 'ContractNo';
+    const cleanBatch = String(rawBatch).replace(/"/g, '').trim() || 'BatchNo';
+    return `${cleanContract}(B${cleanBatch})`;
+}
+window.buildContractWithBatch = buildContractWithBatch;
+
 function updatePartNumberSummary(moduleSheet) {
     const moduleType = moduleSheet.dataset.moduleType;
     const partNoSelects = moduleSheet.querySelectorAll('select[name$="_part_no"]');
@@ -40,14 +52,10 @@ function updatePartNumberSummary(moduleSheet) {
     summaryElement.textContent = summaryParts.join(', ') || 'No parts selected';
 }
 
-// ==========================================
-// NEW: AUTO-GENERATE SHEETS FROM DATA
-// ==========================================
 function autoGenerateSheetsFromData() {
     const sheetsContainer = document.getElementById('sheetsContainer');
     if (!sheetsContainer) return false;
     
-    // Get counts from localStorage
     const subrackCount = parseInt(localStorage.getItem('session_subrackCount')) || 0;
     const processorCount = parseInt(localStorage.getItem('session_processorCount')) || 0;
     const powerCount = parseInt(localStorage.getItem('session_powerCount')) || 0;
@@ -64,10 +72,8 @@ function autoGenerateSheetsFromData() {
         return false;
     }
     
-    // Clear existing sheets
     sheetsContainer.innerHTML = "";
     
-    // Generate sheets
     if (subrackCount > 0) sheetsContainer.appendChild(createSUBRACKSheet(subrackCount));
     if (processorCount > 0) sheetsContainer.appendChild(createPROCESSORSheet(processorCount));
     if (comCount > 0) sheetsContainer.appendChild(createCOMSheet(comCount));
@@ -77,14 +83,12 @@ function autoGenerateSheetsFromData() {
     if (aoCount > 0) sheetsContainer.appendChild(createAOSheet(aoCount));
     if (powerCount > 0) sheetsContainer.appendChild(createPOWERSheet(powerCount));
     
-    // Show sections
     const checkerNameSection = document.getElementById('checkerNameSection');
     if (checkerNameSection) checkerNameSection.style.display = 'block';
     
     const vendorNumberSection = document.getElementById('vendorNumberSection');
     if (vendorNumberSection) vendorNumberSection.style.display = 'block';
     
-    // Disable vendor number and supplier name fields
     const vendorNumberInput = document.getElementById('vendorNumber');
     if (vendorNumberInput) {
         vendorNumberInput.disabled = true;
@@ -102,21 +106,13 @@ function autoGenerateSheetsFromData() {
     return true;
 }
 
-// ==========================================
-// NEW: ENABLE FIELDS FOR EDITING
-// ==========================================
 function enableFieldsForEditing() {
-    // Enable module fields (Part Number, Subrack, Slot)
     document.querySelectorAll('select[name$="_part_no"], input[name$="_subrack"], input[name$="_slot"]').forEach(el => {
         el.disabled = false;
         el.style.backgroundColor = '';
         el.style.cursor = '';
     });
     
-    // Note: Vendor Number and Supplier Name remain disabled (not enabled here)
-    // Checker Name is already enabled
-    
-    // Hide the indicator
     const indicator = document.getElementById('dataLoadedIndicator');
     if (indicator) {
         indicator.classList.remove('show');
@@ -125,9 +121,6 @@ function enableFieldsForEditing() {
     showCustomAlert('Module fields are now editable. Click "Generate Sheets" to update changes.');
 }
 
-// ==========================================
-// MODIFIED: RESTORE MODULE DATA WITH DISABLED FIELDS
-// ==========================================
 function restoreModuleData() {
     const sheets = document.querySelectorAll('#sheetsContainer .module-sheet');
     let hasData = false;
@@ -147,32 +140,27 @@ function restoreModuleData() {
                     const data = savedData[index];
                     if (!data) return;
                     
-                    // Restore Part Number - DISABLED
                     const partNoSelect = row.querySelector('select[name$="_part_no"]');
                     if (partNoSelect && data.partNo) {
                         partNoSelect.value = data.partNo;
                         partNoSelect.disabled = true;
                     }
                     
-                    // Restore Subrack - DISABLED
                     const subrackInput = row.querySelector('input[name$="_subrack"]');
                     if (subrackInput && data.subrack !== undefined && data.subrack !== null) {
                         subrackInput.value = data.subrack;
                         subrackInput.disabled = true;
                     }
                     
-                    // Restore Slot - DISABLED
                     const slotInput = row.querySelector('input[name$="_slot"]');
                     if (slotInput && data.slot !== undefined && data.slot !== null) {
                         slotInput.value = data.slot;
                         slotInput.disabled = true;
                     }
                     
-                    // Restore Serial - KEPT ENABLED (for user input)
                     const serialInput = row.querySelector('input[name$="_serial"]');
                     if (serialInput && data.serial) {
                         serialInput.value = data.serial;
-                        // Serial remains enabled
                         serialInput.disabled = false;
                     }
                     
@@ -187,41 +175,37 @@ function restoreModuleData() {
         }
     });
     
-    // Restore checker name - KEPT ENABLED
     const checkerNameInput = document.getElementById('checkerName');
     if (checkerNameInput) {
         const savedCheckerName = localStorage.getItem('session_checkerName');
         if (savedCheckerName) {
             checkerNameInput.value = savedCheckerName;
         }
-        checkerNameInput.disabled = false; // Keep enabled
+        checkerNameInput.disabled = false;
     }
     
-    // Restore vendor number - DISABLED
     const vendorNumberInput = document.getElementById('vendorNumber');
     if (vendorNumberInput) {
         const savedVendorNumber = localStorage.getItem('session_vendorNumber');
         if (savedVendorNumber) {
             vendorNumberInput.value = savedVendorNumber;
         }
-        vendorNumberInput.disabled = true; // Disabled
+        vendorNumberInput.disabled = true;
         vendorNumberInput.style.backgroundColor = '#f0f0f0';
         vendorNumberInput.style.cursor = 'not-allowed';
     }
     
-    // Restore supplier name - DISABLED
     const supplierNameInput = document.getElementById('supplierName');
     if (supplierNameInput) {
         const savedSupplierName = localStorage.getItem('session_supplierName');
         if (savedSupplierName) {
             supplierNameInput.value = savedSupplierName;
         }
-        supplierNameInput.disabled = true; // Disabled
+        supplierNameInput.disabled = true;
         supplierNameInput.style.backgroundColor = '#f0f0f0';
         supplierNameInput.style.cursor = 'not-allowed';
     }
     
-    // Show the data loaded indicator if we have data
     if (hasData) {
         const indicator = document.getElementById('dataLoadedIndicator');
         if (indicator) {
@@ -232,9 +216,6 @@ function restoreModuleData() {
     return hasData;
 }
 
-// ==========================================
-// MODIFIED: CREATE MODULE SHEET WITH DISABLED FIELDS
-// ==========================================
 function createModuleSheetBase(count, moduleType, partNumbers) {
     const container = document.createElement('div');
     container.className = 'module-sheet';
@@ -276,7 +257,7 @@ function createModuleSheetBase(count, moduleType, partNumbers) {
         partNoSelect.required = true;
         partNoSelect.style.backgroundColor = '#f0f0f0';
         partNoSelect.style.cursor = 'not-allowed';
-        partNoSelect.disabled = true; // Disabled by default
+        partNoSelect.disabled = true;
         
         const placeholderOption = document.createElement('option');
         placeholderOption.value = "";
@@ -301,7 +282,7 @@ function createModuleSheetBase(count, moduleType, partNumbers) {
         subrackInput.required = true;
         subrackInput.style.backgroundColor = '#f0f0f0';
         subrackInput.style.cursor = 'not-allowed';
-        subrackInput.disabled = true; // Disabled by default
+        subrackInput.disabled = true;
         subrackCell.appendChild(subrackInput);
 
         const slotCell = row.insertCell();
@@ -312,7 +293,7 @@ function createModuleSheetBase(count, moduleType, partNumbers) {
         slotInput.required = true;
         slotInput.style.backgroundColor = '#f0f0f0';
         slotInput.style.cursor = 'not-allowed';
-        slotInput.disabled = true; // Disabled by default
+        slotInput.disabled = true;
 
         if (['Subrack', 'Power', 'Processor'].includes(moduleType)) {
             slotInput.value = '0';
@@ -330,8 +311,7 @@ function createModuleSheetBase(count, moduleType, partNumbers) {
         serialInput.setAttribute('inputmode', 'numeric');
         serialInput.style.padding = '8px';
         serialInput.style.width = '140px';
-        // Serial stays enabled for user input
-        serialInput.disabled = false; // Make sure serial is enabled
+        serialInput.disabled = false;
         serialCell.appendChild(serialInput);
 
         tbody.appendChild(row);
@@ -352,10 +332,6 @@ function createAISheet(count) { return createModuleSheetBase(count, 'AI', ['DCAI
 function createAOSheet(count) { return createModuleSheetBase(count, 'AO', ['AO-2']); }
 
 async function goToNext(returnOnly = false) {
-    // ==========================================
-    // 1. VALIDATION PHASE
-    // ==========================================
-
     if (typeof validateAllModuleFields === 'function') {
         if (!validateAllModuleFields()) {
             if (returnOnly) return null;
@@ -363,10 +339,6 @@ async function goToNext(returnOnly = false) {
         }
     }
 
-    // ==========================================
-    // 2. DATA SAVING PHASE
-    // ==========================================
-    
     if (!window.diModuleTypes) window.diModuleTypes = {};
     if (!window.doModuleTypes) window.doModuleTypes = {};
     
@@ -402,7 +374,6 @@ async function goToNext(returnOnly = false) {
         return data;
     };
 
-    // Save all module data
     const processorModulesData = extractRowData(document.querySelectorAll('.module-sheet[data-module-type="Processor"] tbody tr'));
     localStorage.setItem('processorModulesDetails', JSON.stringify(processorModulesData));
     
@@ -467,10 +438,6 @@ async function goToNext(returnOnly = false) {
     localStorage.setItem('comCount', comCount);
     localStorage.setItem('aoModulesToTest', aoCount);
 
-    // ==========================================
-    // 3. DATA PREPARATION FOR BOTH MODES
-    // ==========================================
-    
     const exportData = {};
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -483,19 +450,18 @@ async function goToNext(returnOnly = false) {
     
     const now = new Date();
     const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const contractWithBatch = buildContractWithBatch();
     const contractNo = localStorage.getItem('session_contractNo') || 'ContractNo';
-    const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
+    const rtuSerial = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
     
     exportData.metadata = {
         generationDate: now.toISOString(),
         rtuSerial: rtuSerial,
         contractNo: contractNo,
+        Batch_No: localStorage.getItem('session_Batch_No') || 'N/A',
         testerName: localStorage.getItem('session_name') || 'N/A'
     };
 
-    // ==========================================
-    // 4. RETURN-ONLY MODE
-    // ==========================================
     if (returnOnly) {
         try {
             let txtContent = '';
@@ -505,7 +471,7 @@ async function goToNext(returnOnly = false) {
             
             let pdfResult = null;
             if (typeof generateAndDownloadPDF === 'function') {
-                pdfResult = await generateAndDownloadPDF(contractNo, rtuSerial, true);
+                pdfResult = await generateAndDownloadPDF(contractWithBatch, rtuSerial, true);
             }
             
             return {
@@ -519,9 +485,6 @@ async function goToNext(returnOnly = false) {
         }
     }
     
-    // ==========================================
-    // 5. DOWNLOAD MODE
-    // ==========================================
     try {
         showCustomAlert('Saving and Generating Backup Files...');
 
@@ -530,21 +493,18 @@ async function goToNext(returnOnly = false) {
             txtContent = generateTXTContent();
             
             if (typeof generateAndDownloadQRCode === 'function' && txtContent) {
-                await generateAndDownloadQRCode(txtContent, dateformat, contractNo, rtuSerial);
+                await generateAndDownloadQRCode(txtContent, dateformat, contractWithBatch, rtuSerial);
             }
         }
 
         if (typeof generateAndDownloadPDF === 'function') {
-            await generateAndDownloadPDF(contractNo, rtuSerial, false);
+            await generateAndDownloadPDF(contractWithBatch, rtuSerial, false);
         }
 
     } catch (error) {
         console.error('Export Warning:', error);
     }
 
-    // ==========================================
-    // 6. MARK PAGE AS COMPLETED AND REDIRECT
-    // ==========================================
     if (window.navigationGuard && typeof window.navigationGuard.markPageAsCompleted === 'function') {
         window.navigationGuard.markPageAsCompleted();
     }
@@ -554,9 +514,6 @@ async function goToNext(returnOnly = false) {
     }, 1500);
 }
 
-// ==========================================
-// VALIDATION FUNCTION
-// ==========================================
 function validateAllModuleFields() {
     const sheets = document.querySelectorAll('#sheetsContainer .module-sheet');
     if (sheets.length === 0) {
@@ -752,15 +709,9 @@ function validateAllModuleFields() {
         }
     }
 
-    // Vendor Number and Supplier Name are disabled, so no validation needed
-    // They are populated from localStorage/session data automatically
-
     return true;
 }
 
-// ==========================================
-// DOCUMENT READY
-// ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     const generateBtn = document.getElementById('generateBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -906,16 +857,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     loadBQCounts();
 
-    // ==========================================
-    // AUTO-GENERATE SHEETS FROM LOADED DATA
-    // ==========================================
     setTimeout(() => {
         const sheetsGenerated = autoGenerateSheetsFromData();
         if (sheetsGenerated) {
             const dataLoaded = restoreModuleData();
             if (dataLoaded) {
                 console.log('Data loaded and fields disabled successfully');
-                // Check for duplicates after loading
                 setTimeout(() => highlightDuplicateSerials(), 500);
             }
         }
@@ -988,7 +935,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 vendorNumberSection.style.display = 'block';
             }
 
-            // Keep vendor number and supplier name disabled
             const vendorNumberInput = document.getElementById('vendorNumber');
             if (vendorNumberInput) {
                 vendorNumberInput.disabled = true;
@@ -1132,7 +1078,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Export button
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) {
         exportBtn.addEventListener('click', async function() {
@@ -1175,17 +1120,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     generationDate: new Date().toISOString(),
                     rtuSerial: localStorage.getItem('session_rtuSerial') || 'N/A',
                     contractNo: localStorage.getItem('session_contractNo') || 'N/A',
+                    Batch_No: localStorage.getItem('session_Batch_No') || 'N/A',
                     testerName: localStorage.getItem('session_name') || 'N/A'
                 };
                 
                 const now = new Date();
                 const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-                const contractNo = localStorage.getItem('session_contractNo') || 'ContractNo';
-                const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
+                const contractWithBatch = buildContractWithBatch();
+                const rtuSerial = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
                 
                 const dataStr = JSON.stringify(exportData, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                const exportFileDefaultName = `${dateformat}_BQ_BACKUP_${contractNo}_${rtuSerial}.json`;
+                const exportFileDefaultName = `${dateformat}_BQ_BACKUP_${contractWithBatch}_${rtuSerial}.json`;
                 const linkElement = document.createElement('a');
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
@@ -1195,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const txtContent = generateTXTContent();
                 const txtDataUri = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txtContent);
-                const txtFileName = `${dateformat}_QR_TXT_${contractNo}_${rtuSerial}.txt`;
+                const txtFileName = `${dateformat}_QR_TXT_${contractWithBatch}_${rtuSerial}.txt`;
                 
                 const txtLinkElement = document.createElement('a');
                 txtLinkElement.setAttribute('href', txtDataUri);
@@ -1205,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.removeChild(txtLinkElement);
                 
                 setTimeout(async () => {
-                    const qrSuccess = await generateAndDownloadQRCode(txtContent, dateformat, contractNo, rtuSerial);
+                    const qrSuccess = await generateAndDownloadQRCode(txtContent, dateformat, contractWithBatch, rtuSerial);
                     if (qrSuccess) {
                         showCustomAlert('Configuration exported successfully as JSON, TXT, and QR Code files!');
                     } else {
@@ -1229,9 +1175,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => highlightDuplicateSerials(), 500);
 });
 
-// ==========================================
-// SERIAL NUMBER HANDLING
-// ==========================================
 function setupSerialNumberHandling() {
     const sheetsContainer = document.getElementById('sheetsContainer');
     
@@ -1436,9 +1379,6 @@ function handleSerialBackspace(input) {
     }
 }
 
-// ==========================================
-// PDF GENERATION
-// ==========================================
 async function generateAndDownloadPDF(contractNo, rtuSerial, returnBlob = false) {
     if (!window.jspdf) {
         console.error("jsPDF library not found");
@@ -1542,9 +1482,6 @@ async function generateAndDownloadPDF(contractNo, rtuSerial, returnBlob = false)
     }
 }
 
-// ==========================================
-// DATA GATHERING FUNCTIONS
-// ==========================================
 function gatherAllModuleData() {
     const sheets = document.querySelectorAll('#sheetsContainer .module-sheet');
     const moduleData = {};
@@ -1665,9 +1602,6 @@ function generateTXTContent() {
     return txtContent;
 }
 
-// ==========================================
-// QR CODE GENERATION
-// ==========================================
 function generateAndDownloadQRCode(txtContent, dateformat, contractNo, rtuSerial) {
     try {
         console.log("Starting QR code generation...");
@@ -1746,9 +1680,6 @@ function generateAndDownloadQRCode(txtContent, dateformat, contractNo, rtuSerial
     }
 }
 
-// ==========================================
-// GENERATE BQ PDF FOR DRIVE
-// ==========================================
 async function generateBQPDFForDrive(contractNo, rtuSerial) {
     try {
         if (!window.jspdf) {

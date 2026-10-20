@@ -1,42 +1,34 @@
 // googleDrive.js - Google Drive Integration
 
 // ============================================
-/*
-// CONFIGURATION - UPDATE THESE VALUES  (amin99boyz@gmail.com)
-// ============================================
-const GOOGLE_API_KEY = 'AIzaSyA9I3SyapNGGv3y26Jk-bo37XQ4zUKo5qs';
-const GOOGLE_CLIENT_ID = '656211138338-35iq6or29q9ea6583v80ofq746hinlha.apps.googleusercontent.com';
-const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
-*/
-//------------------------------------------------------------------------------------------------------------
 // CONFIGURATION - UPDATE THESE VALUES  (testingdigitalform@gmail.com)
 // ============================================
 const GOOGLE_API_KEY = 'AIzaSyDmEfrpPBRaPvQO6LrDLw2SOuUGCW17DxY';
 const GOOGLE_CLIENT_ID = '266459609799-r2daskhooeeboqgaq58pr8u8nsei3vdf.apps.googleusercontent.com';
 const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-//--------------------------------------------------------------------------------------------------------------
-
-
 // FOLDER IDs FOR DIFFERENT FILE TYPES
-const JSON_FOLDER_ID = '1c2tPDiI2gX29Uh40n_vRDeqe7A_AChUA';  // JSON files folder
-const TXT_PNG_FOLDER_ID = '1iygtU_4YlLvM_Kx0XUQsGnbBsiZmCKTW';  // TXT and PNG files folder
-const PDF_FOLDER_ID = '1enQcRQDoiNXMf4La1VANdybHFvzFzMHZ';  // PDF files folder
-const GENERATED_PDF_FOLDER_ID = '1Wnl9fF4V7ZKDiAjDDkNwI3ILdP7i3TjX'; // PDF RTU Report
+const JSON_FOLDER_ID = '1c2tPDiI2gX29Uh40n_vRDeqe7A_AChUA';
+const TXT_PNG_FOLDER_ID = '1iygtU_4YlLvM_Kx0XUQsGnbBsiZmCKTW';
+const PDF_FOLDER_ID = '1enQcRQDoiNXMf4La1VANdybHFvzFzMHZ';
+const GENERATED_PDF_FOLDER_ID = '1Wnl9fF4V7ZKDiAjDDkNwI3ILdP7i3TjX';
 
-// ============================================
-// GLOBAL VARIABLES
-// ============================================
+// ---------- filename helper (NO space before "(") ----------
+function buildContractWithBatch() {
+    const rawContract = localStorage.getItem('session_contractNo') || 'ContractNo';
+    const rawBatch = localStorage.getItem('session_Batch_No') || 'BatchNo';
+    const cleanContract = String(rawContract).replace(/"/g, '').replace(/[\s\u00A0]+$/g, '').trim() || 'ContractNo';
+    const cleanBatch = String(rawBatch).replace(/"/g, '').trim() || 'BatchNo';
+    return `${cleanContract}(B${cleanBatch})`;
+}
+window.buildContractWithBatch = buildContractWithBatch;
+
 let gapiLoaded = false;
 let gisLoaded = false;
 let tokenClient = null;
 let isAuthenticating = false;
 let cachedAccessToken = null;
 let authPromise = null;
-
-// ============================================
-// GOOGLE API INITIALIZATION
-// ============================================
 
 function loadGoogleAPIs() {
     return new Promise((resolve, reject) => {
@@ -111,10 +103,6 @@ function loadGoogleAPIs() {
         }
     });
 }
-
-// ============================================
-// AUTHENTICATION FUNCTIONS
-// ============================================
 
 async function getAccessToken() {
     if (cachedAccessToken && await isTokenValid(cachedAccessToken)) {
@@ -207,10 +195,6 @@ async function checkExistingToken() {
     }
     return null;
 }
-
-// ============================================
-// FOLDER MANAGEMENT FUNCTIONS
-// ============================================
 
 async function findFolderByName(folderName, parentFolderId = null) {
     try {
@@ -332,10 +316,6 @@ async function getContractFolderInParent(contractNo, parentFolderId) {
     }
 }
 
-// ============================================
-// UPLOAD FUNCTIONS WITH CONTRACT FOLDERS
-// ============================================
-
 async function uploadToDriveFolder(fileData, fileName, mimeType = 'application/pdf', folderId = null) {
     try {
         console.log('Starting Google Drive upload for:', fileName, 'to folder:', folderId);
@@ -422,21 +402,16 @@ async function uploadToContractFolderBasedOnType(fileData, fileName, mimeType) {
         
         let targetFolderId;
         
-        // Determine which folder to use based on file type
         if (fileName.endsWith('.json')) {
-            // JSON files go to JSON_FOLDER_ID -> contract folder
             const contractFolderId = await getContractFolderInParent(cleanContractNo, JSON_FOLDER_ID);
             targetFolderId = contractFolderId;
         } else if (fileName.endsWith('.txt') || fileName.endsWith('.png')) {
-            // TXT and PNG files go to TXT_PNG_FOLDER_ID -> contract folder
             const contractFolderId = await getContractFolderInParent(cleanContractNo, TXT_PNG_FOLDER_ID);
             targetFolderId = contractFolderId;
         } else if (fileName.endsWith('.pdf')) {
-            // PDF files go to PDF_FOLDER_ID -> contract folder
             const contractFolderId = await getContractFolderInParent(cleanContractNo, PDF_FOLDER_ID);
             targetFolderId = contractFolderId;
         } else {
-            // Default to JSON folder if file type unknown
             const contractFolderId = await getContractFolderInParent(cleanContractNo, JSON_FOLDER_ID);
             targetFolderId = contractFolderId;
         }
@@ -527,7 +502,6 @@ async function uploadOrReplaceFile(fileData, fileName, mimeType = 'application/p
     try {
         console.log('Starting upload or replace for:', fileName);
         
-        // Check if file already exists in the target folder
         const existingFile = await checkFileExists(fileName, folderId);
         
         if (existingFile) {
@@ -540,7 +514,6 @@ async function uploadOrReplaceFile(fileData, fileName, mimeType = 'application/p
             }
         }
         
-        // Upload the new file
         return await uploadToDriveFolder(fileData, fileName, mimeType, folderId);
         
     } catch (error) {
@@ -560,7 +533,6 @@ async function uploadOrReplaceInContractFolder(fileData, fileName, mimeType = 'a
         
         console.log('Upload/Replace for contract:', cleanContractNo, 'File:', fileName);
         
-        // Determine target folder based on file type
         let mainFolderId;
         if (fileName.endsWith('.json')) {
             mainFolderId = JSON_FOLDER_ID;
@@ -569,17 +541,15 @@ async function uploadOrReplaceInContractFolder(fileData, fileName, mimeType = 'a
         } else if (fileName.endsWith('.pdf')) {
             mainFolderId = PDF_FOLDER_ID;
         } else {
-            mainFolderId = JSON_FOLDER_ID; // Default
+            mainFolderId = JSON_FOLDER_ID;
         }
         
-        // Get or create contract folder inside the main folder
         const contractFolderId = await getContractFolderInParent(cleanContractNo, mainFolderId);
         
         if (!contractFolderId) {
             throw new Error('Could not determine target folder');
         }
         
-        // Check if file exists in the contract folder
         const existingFile = await checkFileExists(fileName, contractFolderId);
         
         if (existingFile) {
@@ -592,7 +562,6 @@ async function uploadOrReplaceInContractFolder(fileData, fileName, mimeType = 'a
             }
         }
         
-        // Upload the file to the contract folder
         return await uploadToDriveFolder(fileData, fileName, mimeType, contractFolderId);
         
     } catch (error) {
@@ -600,10 +569,6 @@ async function uploadOrReplaceInContractFolder(fileData, fileName, mimeType = 'a
         throw error;
     }
 }
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
 
 function updateDriveStatusIfAvailable(message, isError = false, isSuccess = false) {
     if (typeof updateDriveStatus === 'function') {
@@ -638,10 +603,6 @@ function validateGoogleConfig() {
     };
 }
 
-// ============================================
-// INITIALIZATION
-// ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Google Drive module loaded');
     
@@ -660,9 +621,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ============================================
-// EXPORT FUNCTIONS
-// ============================================
 window.uploadToDrive = uploadToDrive;
 window.createShareableLink = createShareableLink;
 window.validateGoogleConfig = validateGoogleConfig;

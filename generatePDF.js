@@ -13,6 +13,18 @@ function getScadaModeFromStorage() {
     return localStorage.getItem('scadaMode') === 'ready' ? 'ready' : 'equipped';
 }
 
+// ============================================================
+// FILENAME HELPER — builds "Contract(Bbatch)" string
+// ============================================================
+function buildContractWithBatch() {
+    const rawContract = localStorage.getItem('session_contractNo') || 'ContractNo';
+    const rawBatch = localStorage.getItem('session_Batch_No') || 'BatchNo';
+    const cleanContract = String(rawContract).replace(/"/g, '').trim() || 'ContractNo';
+    const cleanBatch = String(rawBatch).replace(/"/g, '').trim() || 'BatchNo';
+    return `${cleanContract}(B${cleanBatch})`;
+}
+window.buildContractWithBatch = buildContractWithBatch;
+
 // 1. HELPER: Fetch time ONCE
 async function fetchGlobalTime() {
     try {
@@ -338,7 +350,9 @@ async function generateFinalPDF(currentUserData) {
 
         const now = new Date();
         const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-        const fileName = `RTU_Report_${localStorage.getItem('session_contractNo') || 'ContractNo'}_${localStorage.getItem('session_rtuSerial') || 'SerialNo'}.pdf`;
+        const contractWithBatch = buildContractWithBatch();
+        const rtuSerialClean = (localStorage.getItem('session_rtuSerial') || 'SerialNo').replace(/"/g, '').trim() || 'SerialNo';
+        const fileName = `RTU_Report_${contractWithBatch}_${rtuSerialClean}.pdf`;
 
         if (typeof download === 'function') {
             download(modifiedPdfBytes, fileName, 'application/pdf');

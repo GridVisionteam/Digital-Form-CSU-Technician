@@ -169,13 +169,19 @@
                 const jsonBlob = new Blob([jsonContent], { type: 'application/json' });
                 const jsonBytes = await new Uint8Array(await new Response(jsonBlob).arrayBuffer());
                 
-                // Create filenames
+                // Create filenames (include Batch No. as (B{n}) after contract)
                 const now = new Date();
                 const dateformat = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
                 const rtuSerial = localStorage.getItem('session_rtuSerial') || 'SerialNo';
-                const cleanRtuSerial = rtuSerial.replace(/"/g, '').trim();
-                const pdfFileName = `RTU_Report_${cleanContractNo}_${cleanRtuSerial}.pdf`;
-                const jsonFileName = `${dateformat}_RTU_Backup_${cleanContractNo}_${cleanRtuSerial}.json`;
+                const cleanRtuSerial = rtuSerial.replace(/"/g, '').trim() || 'SerialNo';
+
+                // Build "Contract(Bbatch)" — uses the shared helper if available
+                const batchRaw = localStorage.getItem('session_Batch_No') || 'BatchNo';
+                const cleanBatch = String(batchRaw).replace(/"/g, '').trim() || 'BatchNo';
+                const contractWithBatch = `${cleanContractNo}(B${cleanBatch})`;
+
+                const pdfFileName = `RTU_Report_${contractWithBatch}_${cleanRtuSerial}.pdf`;
+                const jsonFileName = `${dateformat}_RTU_Backup_${contractWithBatch}_${cleanRtuSerial}.json`;
                 
                 // Step 3: Get or create contract folder for JSON
                 progressBar.style.width = '40%';
